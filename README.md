@@ -118,39 +118,6 @@ Note.removeRequest "every_notes", (err) ->
      console.log err
 ```
 
-### Accounts
-
-```coffeescript
-# Create
-dataMailBox =
-    name: "test mailBox"
-    id: "110"
-MailBox.create dataMailBox, (err, mailBox) =>
-    dataAccount =
-        pwd: "password"
-        login: "log"
-    mailBox.createAccount dataAccount, (err, account) ->
-        console.log account.id
-
-# Get
-mailBox.getAccount (err, account) ->
-    console.log account
-
-# Update
-data =
-    pwd: "newPassword"
-    login: "newLog"
-mailBox.updateAccount data, (err) ->
-    console.log err
-
-# Update attributes
-mailBox.mergeAccount login: "newLog", (err) ->
-    console.log err
-
-# Delete
-mailBox.destroy (err) ->
-    console.log err
-```
 
 ## Build & tests
 
