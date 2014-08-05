@@ -3,9 +3,8 @@ async = require 'async'
 fs = require "fs"
 
 PouchDB = require 'pouchdb'
-CozyAdapter = require './src/cozy_data_system'
 Schema = require('jugglingdb').Schema
-PouchAdapter = require("./src/cozy_data_system").PouchDB
+PouchAdapter = require("./src/pouchdb").PouchDB
 
 getNewSchema = (name) ->
     schema = new Schema 'memory'
@@ -379,8 +378,6 @@ describe "Requests", ->
             it "When I send a request to access view every_docs", (done) ->
                 delete @err
                 @schema.Note.request "every_notes", (err, notes) =>
-                    console.log err
-                    console.log notes
                     @notes = notes
                     done()
 

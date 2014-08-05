@@ -1,5 +1,5 @@
-Client = require("request-json").JsonClient
 fs = require 'fs'
+async = require 'async'
 Pouch = require 'pouchdb'
 
 module.exports.initialize = (@schema, callback) ->
@@ -11,7 +11,8 @@ class module.exports.PouchDB
 
     constructor: (@schema, @name) ->
         @_models = {}
-        @db = new Pouch 'cozy'
+        dbName = @name || 'cozy'
+        @db = new Pouch dbName
         @views = {}
 
 
@@ -58,6 +59,7 @@ class module.exports.PouchDB
         descr.model::removeBinary = (path, callback) ->
             @_adapter().removeBinary  @, path, callback
 
+
     # Check existence of model in the data system.
     exists: (model, id, callback) ->
         @db.get id, (err, doc) =>
@@ -67,6 +69,7 @@ class module.exports.PouchDB
                 callback null, false
             else
                 callback null, true
+
 
     # Find a doc with its ID. Returns it if it is found else it
     # returns null
@@ -223,16 +226,15 @@ class module.exports.PouchDB
             map = request
         else
             map = request.map
-            reduce = request.reduce.toString()
+            reduce = request.reduce
 
         qs = map.toString()
         qs = qs.substring 'function(doc) {'.length
         qs = qs.substring 0, (qs.length - 1)
-
         stringquery = "if (doc.docType.toLowerCase() === \"#{model.toLowerCase()}\") #{qs.toString()}};"
         stringquery = stringquery.replace '\n', ''
-        map = new Function "doc", stringquery
 
+        map = new Function "doc", stringquery
         if reduce?
             view =
                 map: map
@@ -240,20 +242,19 @@ class module.exports.PouchDB
         else
             view = map
 
-        name = '_design/' + model.toLowerCase() + '/' + name
-        @db.get name, (err, designDoc) =>
-            unless designDoc?
-                designDoc =
-                    _id: name
-                    views: {}
-            unless designDoc.views?
-                designDoc.views = {}
-            designDoc.views[name] = view
-            console.log designDoc
-            @db.put designDoc, stale: 'update_after', (err, designDoc) ->
-                console.log err
-                console.log designDoc
-                callback()
+        name = "_design/#{model.toLowerCase()}/#{name}"
+        @views[name] = view
+        callback()
+        #@db.get name, (err, designDoc) =>
+        #    unless designDoc?
+        #        designDoc =
+        #            _id: name
+        #            views: {}
+        #    unless designDoc.views?
+        #        designDoc.views = {}
+        #    designDoc.views[name] = view
+        #    @db.put designDoc, stale: 'update_after', (err, designDoc) ->
+        #        callback()
 
 
     # Return defined request result.
@@ -263,7 +264,8 @@ class module.exports.PouchDB
             params = {}
 
         name = '_design/' + model.toLowerCase() + '/' + name
-        @db.query name, params, (err, body) =>
+        view = @views[name]
+        @db.query view, params, (err, body) =>
             if err
                 callback err
             else
@@ -282,7 +284,8 @@ class module.exports.PouchDB
             params = {}
 
         name = '_design/' + model.toLowerCase() + '/' + name
-        @db.query name, params, (err, body) =>
+        view = @views[name]
+        @db.query view, params, (err, body) =>
             if err
                 callback err
             else
@@ -291,6 +294,7 @@ class module.exports.PouchDB
 
     # Delete request that match given name for current type.
     removeRequest: (model, name, callback) ->
+        name = '_design/' + model.toLowerCase() + '/' + name
         delete @views[name]
         callback()
 
@@ -301,18 +305,14 @@ class module.exports.PouchDB
             callback = params
             params = {}
 
-        @request name, params, (err, docs) ->
+        @request model, name, params, (err, docs) ->
             if err
                 callback err
             else
-                (->
-                    doc = docs.pop()
-                    if doc?
-                        doc.destroy()
-                        @()
-                    else
-                        callback()
-                )()
+                async.eachSeries docs, (doc, cb) ->
+                    doc.destroy cb
+                , (err) ->
+                    callback err
 
 
     # Shortcut for "all" view, a view containing all objects of this type.
@@ -354,17 +354,21 @@ class module.exports.PouchDB
         ds = @schema.definitions[model]
         return ds.properties[propName] && ds.properties[propName].type.name
 
+
 # Send mail
 exports.sendMail = (data, callback) ->
     callback new Error 'not implemented yet'
+
 
 # Send mail to user
 exports.sendMailToUser = (data, callback) ->
     callback new Error 'not implemented yet'
 
+
 # Send mail from user
 exports.sendMailFromUser = (data, callback) ->
     callback new Error 'not implemented yet'
+
 
 exports.commonRequests =
     checkError: (err) ->
