@@ -9,9 +9,9 @@ module.exports.initialize = (@schema, callback) ->
 
 class module.exports.PouchDB
 
-    constructor: (@schema, @name) ->
+    constructor: (@schema) ->
         @_models = {}
-        dbName = @name || 'cozy'
+        dbName = process.env.POUCHDB_NAME || 'cozy'
         @db = new Pouch dbName
         @views = {}
 
@@ -231,7 +231,8 @@ class module.exports.PouchDB
         qs = map.toString()
         qs = qs.substring 'function(doc) {'.length
         qs = qs.substring 0, (qs.length - 1)
-        stringquery = "if (doc.docType.toLowerCase() === \"#{model.toLowerCase()}\") #{qs.toString()}};"
+        stringquery = "if (doc.docType.toLowerCase() === " + \
+                      "\"#{model.toLowerCase()}\") #{qs.toString()}};"
         stringquery = stringquery.replace '\n', ''
 
         map = new Function "doc", stringquery
