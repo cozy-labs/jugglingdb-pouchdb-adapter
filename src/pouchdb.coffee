@@ -6,6 +6,7 @@ remove = require 'remove'
 indexer = require 'search-index'
 nodemailer = require 'nodemailer'
 sendmailTransport = require 'nodemailer-sendmail-transport'
+uuid = require 'node-uuid'
 
 
 Pouch = require 'pouchdb'
@@ -104,6 +105,8 @@ class module.exports.PouchDB
             data.id = data._id unless data.id?
             data._id = data.id unless data._id?
             func = 'put'
+        else
+            data._id = uuid.v4().split('-').join('')
 
         @db[func] data, (err, response) =>
             if err
