@@ -38,6 +38,7 @@
     "chai": "1.7.0",
     "should": "*",
     "async": "*",
+    "remove": "*",
     "coffee-script": "latest"
   },
   "scripts": {

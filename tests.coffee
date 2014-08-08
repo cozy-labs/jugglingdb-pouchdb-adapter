@@ -91,6 +91,7 @@ describe "Find", ->
 
         it "When I claim note with id 321", (done) ->
             @schema.Note.find '321', (err, note) =>
+                console.log note
                 @note = note
                 done()
 
@@ -443,3 +444,118 @@ describe "Requests", ->
 
             #it "Then I should have 0 documents returned", ->
                 #@notes.should.have.length 0
+                #
+
+### Indexation ###
+
+ids = []
+dragonNoteId = "0"
+
+createNoteFunction = (schema, title, content, author) ->
+    (callback) ->
+        if author? then authorId = author.id else authorId = null
+        data =
+            title: title
+            content: content
+            author: authorId
+            docType: 'Note'
+
+        schema.Note.create data, (err, note) ->
+            ids.push note.id
+            dragonNoteId = note.id if title is "Note 02"
+
+            note.index ["title", "content"], (err) ->
+                callback()
+
+describe "Search features", ->
+
+    before (done) ->
+        @schema = getNewSchema 'test-index'
+        done()
+
+    after (done) ->
+        remove = require 'remove'
+        remove.removeSync './si'
+        @schema.adapter.db.destroy done
+
+    describe "index", ->
+
+        it "When given I index four notes", (done) ->
+            async.series [
+                createNoteFunction @schema, "Note 01", "little stories begin"
+                createNoteFunction @schema, "Note 02", "great dragons are coming"
+                createNoteFunction @schema, "Note 03", "small hobbits are afraid"
+                createNoteFunction @schema, "Note 04", "such as humans"
+            ], =>
+                done()
+
+        it "And I send a request to search the notes containing dragons", \
+                (done) ->
+            @schema.Note.search "dragons", (err, notes) =>
+                @notes = notes
+                done()
+
+        it "Then result is the second note I created", ->
+            @notes.length.should.equal 1
+            @notes[0].title.should.equal "Note 02"
+            @notes[0].content.should.equal "great dragons are coming"
+
+
+### Attachments ###
+
+describe "Attachments", ->
+
+    before (done) ->
+        @schema = getNewSchema 'test-06'
+        data =
+            title: "my note"
+            content: "my content"
+            docType: "Note"
+
+        @schema.Note.create data, (err, note) =>
+            @err = err if err
+            @note = note
+            done()
+
+    after (done) ->
+        @schema.adapter.db.destroy done
+
+    describe "Add an attachment", ->
+
+        it "When I add an attachment", (done) ->
+            @note.attachFile "./test.png", (err) =>
+                @err = err
+                done()
+
+        it "Then no error is returned", ->
+            should.not.exist @err
+
+    describe "Retrieve an attachment", ->
+
+        it "When I claim this attachment", (done) ->
+            stream = @note.getFile "test.png", -> done()
+            stream.pipe fs.createWriteStream('./test-get.png')
+
+        it "Then I got the same file I attached before", ->
+            fileStats = fs.statSync('./test.png')
+            resultStats = fs.statSync('./test-get.png')
+            resultStats.size.should.equal fileStats.size
+
+    describe "Remove an attachment", ->
+
+        it "When I remove this attachment", (done) ->
+            @note.removeFile "test.png", (err) =>
+                @err = err
+                done()
+
+        it "Then no error is returned", ->
+            should.not.exist @err
+
+        it "When I claim this attachment", (done) ->
+            stream = @note.getFile "test.png", (err) =>
+                @err = err
+                done()
+            stream.pipe fs.createWriteStream('./test-get.png')
+
+        it "Then I got an error", ->
+            should.exist @err

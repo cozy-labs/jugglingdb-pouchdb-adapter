@@ -160,7 +160,8 @@ class module.exports.PouchDB
                     else if not response.ok
                         callback new Error 'An error occured while deleting document.'
                     else
-                        callback()
+                        indexer.del id, -> # ignore index deletion errors
+                            callback()
 
 
     # index given fields of model instance inside cozy data indexer.
