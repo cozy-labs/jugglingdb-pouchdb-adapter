@@ -3,7 +3,7 @@ pathHelpers = require 'path'
 async = require 'async'
 mkdirp = require 'mkdirp'
 Pouch = require 'pouchdb'
-si = require 'search-index'
+indexer = require 'search-index'
 
 module.exports.initialize = (@schema, callback) ->
     schema.adapter = new module.exports.PouchDB schema
@@ -21,6 +21,7 @@ class module.exports.PouchDB
 
     # Register Model to adapter and define extra methods
     define: (descr) ->
+        descr.properties.docType = type: String, default: descr.model.modelName
         @_models[descr.model.modelName] = descr
 
         descr.model.search = (query, callback) =>
@@ -171,12 +172,13 @@ class module.exports.PouchDB
     # TODO make search index silent.
     index: (model, fields, callback) ->
         doc = {}
+        fields.push 'docType'
         for field in fields
             doc[field] = model[field]
         wrapper = {}
         wrapper[model.id] = doc
 
-        si.add wrapper, 'index', fields, (msg) ->
+        indexer.add wrapper, 'index', fields, (msg) ->
             callback()
 
 
@@ -190,20 +192,21 @@ class module.exports.PouchDB
                 '*': query.split(' ')
             offset: "0"
             pageSize: "20"
+            filter:
+                docType: model
 
-        si.search q, (hits) =>
+        indexer.search q, (hits) =>
+            results = []
             ids = []
+
             for hit in hits.hits
                 ids.push hit.id
 
-            results = []
             async.eachSeries ids, (id, cb) =>
                 @find model, id, (err, result) ->
-                    if err
-                        cb err
-                    else
-                        results.push result
-                        cb()
+                    results.push result unless err?
+                    cb()
+
             , (err) ->
                 callback err, results
 
@@ -252,21 +255,51 @@ class module.exports.PouchDB
         filepath = pathHelpers.join folder, filename
         fs.unlink filepath, callback
 
+
     # Save a file into data system and attach it to current model.
     attachBinary: (model, path, data, callback) ->
-        callback new Error 'not implemented yet'
+        if typeof data is 'function'
+            callback = data
 
-    # Get file stream of given file for given model from data system
+        folder = pathHelpers.join "attachments", model.id
+        mkdirp folder, (err) ->
+            if err then callback err
+            else
+                filename = pathHelpers.basename path
+                filepath = pathHelpers.join folder, filename
+                source = fs.createReadStream path
+                target = fs.createWriteStream filepath
+                source.on 'error', callback
+                source.on 'end', callback
+                source.pipe target
+
+
+    # Get file stream of given file for given model.
     getBinary: (model, path, callback) ->
-        callback new Error 'not implemented yet'
+        folder = pathHelpers.join "attachments", model.id
+        filename = pathHelpers.basename path
+        filepath = pathHelpers.join folder, filename
+        source = fs.createReadStream filepath
+        source.on 'error', callback
+        source.on 'end', callback
+        source
 
-    # Save to disk given file for given model from data system
+
+    # Save to disk given file for given model.
     saveBinary: (model, path, filePath, callback) ->
-        callback new Error 'not implemented yet'
+        target = fs.createWriteStream filePath
+        source = getFile model, path, callback
+        source.on 'error', callback
+        target.on 'finish', callback
+        source.pipe target
+
 
     # Remove from db given file of given model.
     removeBinary: (model, path, callback) ->
-        callback new Error 'not implemented yet'
+        folder = pathHelpers.join "attachments", model.id
+        filepath = pathHelpers.join folder, filename
+        fs.unlink filepath, callback
+
 
     # Check if an error occurred. If any, it returns a proper error.
     checkError: (error, response, body, code, callback) ->
