@@ -2,8 +2,13 @@ fs = require 'fs'
 pathHelpers = require 'path'
 async = require 'async'
 mkdirp = require 'mkdirp'
-Pouch = require 'pouchdb'
+remove = require 'remove'
 indexer = require 'search-index'
+nodemailer = require 'nodemailer'
+sendmailTransport = require 'nodemailer-sendmail-transport'
+
+
+Pouch = require 'pouchdb'
 
 module.exports.initialize = (@schema, callback) ->
     schema.adapter = new module.exports.PouchDB schema
@@ -150,6 +155,7 @@ class module.exports.PouchDB
     #     note.destroy ->
     #         ...
     destroy: (model, id, callback) ->
+
         @db.get id, (err, doc) =>
             if err
                 callback err
@@ -160,8 +166,10 @@ class module.exports.PouchDB
                     else if not response.ok
                         callback new Error 'An error occured while deleting document.'
                     else
+                        folder = pathHelpers.join "attachments", id
                         indexer.del id, -> # ignore index deletion errors
-                            callback()
+                            remove folder,  -> # ignore errors
+                                callback()
 
 
     # index given fields of model instance inside cozy data indexer.
@@ -452,17 +460,28 @@ class module.exports.PouchDB
 
 # Send mail
 exports.sendMail = (data, callback) ->
-    callback new Error 'not implemented yet'
+    transporter = nodemailer.createTransport sendmailTransport options
+    transporter.sendMail data, options
 
 
 # Send mail to user
 exports.sendMailToUser = (data, callback) ->
-    callback new Error 'not implemented yet'
+    try
+        config = require './config'
+        config.to = config.email
+    catch
+        console.log "no config found, can't retrieve user address"
+    @sendMail data, options
 
 
 # Send mail from user
 exports.sendMailFromUser = (data, callback) ->
-    callback new Error 'not implemented yet'
+    try
+        config = require './config'
+        config.from = config.email
+    catch
+        console.log "no config found, can't retrieve user address"
+    @sendMail data, options
 
 
 exports.commonRequests =
