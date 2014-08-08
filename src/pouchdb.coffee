@@ -1,6 +1,9 @@
 fs = require 'fs'
+pathHelpers = require 'path'
 async = require 'async'
+mkdirp = require 'mkdirp'
 Pouch = require 'pouchdb'
+si = require 'search-index'
 
 module.exports.initialize = (@schema, callback) ->
     schema.adapter = new module.exports.PouchDB schema
@@ -165,8 +168,16 @@ class module.exports.PouchDB
     # ex: note.index ["content", "title"], (err) ->
     #  ...
     #
+    # TODO make search index silent.
     index: (model, fields, callback) ->
-        callback new Error 'not implemented yet'
+        doc = {}
+        for field in fields
+            doc[field] = model[field]
+        wrapper = {}
+        wrapper[model.id] = doc
+
+        si.add wrapper, 'index', fields, (msg) ->
+            callback()
 
 
     # Retrieve note through index. Give a query then grab results.
@@ -174,23 +185,72 @@ class module.exports.PouchDB
     # ...
     #
     search: (model, query, callback) ->
-        callback new Error 'not implemented yet'
+        q =
+            query:
+                '*': query.split(' ')
+            offset: "0"
+            pageSize: "20"
+
+        si.search q, (hits) =>
+            ids = []
+            for hit in hits.hits
+                ids.push hit.id
+
+            results = []
+            async.eachSeries ids, (id, cb) =>
+                @find model, id, (err, result) ->
+                    if err
+                        cb err
+                    else
+                        results.push result
+                        cb()
+            , (err) ->
+                callback err, results
+
 
     # Save a file into data system and attach it to current model.
     attachFile: (model, path, data, callback) ->
-        callback new Error 'not implemented yet'
+        if typeof data is 'function'
+            callback = data
 
-    # Get file stream of given file for given model from data system
+        folder = pathHelpers.join "attachments", model.id
+        mkdirp folder, (err) ->
+            if err then callback err
+            else
+                filename = pathHelpers.basename path
+                filepath = pathHelpers.join folder, filename
+                source = fs.createReadStream path
+                target = fs.createWriteStream filepath
+                source.on 'error', callback
+                source.on 'end', callback
+                source.pipe target
+
+
+    # Get file stream of given file for given model.
     getFile: (model, path, callback) ->
-        callback new Error 'not implemented yet'
+        folder = pathHelpers.join "attachments", model.id
+        filename = pathHelpers.basename path
+        filepath = pathHelpers.join folder, filename
+        source = fs.createReadStream filepath
+        source.on 'error', callback
+        source.on 'end', callback
+        source
 
-    # Save to disk given file for given model from data system
+
+    # Save to disk given file for given model.
     saveFile: (model, path, filePath, callback) ->
-        callback new Error 'not implemented yet'
+        target = fs.createWriteStream filePath
+        source = getFile model, path, callback
+        source.on 'error', callback
+        target.on 'finish', callback
+        source.pipe target
+
 
     # Remove from db given file of given model.
-    removeFile: (model, path, callback) ->
-        callback new Error 'not implemented yet'
+    removeFile: (model, filename, callback) ->
+        folder = pathHelpers.join "attachments", model.id
+        filepath = pathHelpers.join folder, filename
+        fs.unlink filepath, callback
 
     # Save a file into data system and attach it to current model.
     attachBinary: (model, path, data, callback) ->
