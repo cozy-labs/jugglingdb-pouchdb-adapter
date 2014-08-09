@@ -15,7 +15,7 @@
       "url": "https://github.com/frankrousseau/jugglingdb-pouchdb-adapter/blob/master/LICENSE"
     }
   ],
-  "version": "0.5.6",
+  "version": "0.5.7",
   "homepage": "https://github.com/frankrousseau/jugglingdb-pouchdb-adapter/",
   "bugs": {
     "url": "https://github.com/frankrousseau/jugglingdb-pouchdb-adapter/issues"
