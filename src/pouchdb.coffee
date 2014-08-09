@@ -20,9 +20,16 @@ class module.exports.PouchDB
 
     constructor: (@schema) ->
         @_models = {}
-        dbName = process.env.POUCHDB_NAME || 'cozy'
-        @db = new Pouch dbName
         @views = {}
+
+        if @schema.settings.db?
+            @db = db
+        else
+            if @schema.settings.dbName?
+                dbName = @schema.settings.dbName
+            else
+                dbName = process.env.POUCHDB_NAME || 'cozy'
+            @db = new Pouch dbName
 
 
     # Register Model to adapter and define extra methods
