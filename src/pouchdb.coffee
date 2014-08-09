@@ -23,7 +23,7 @@ class module.exports.PouchDB
         @views = {}
 
         if @schema.settings.db?
-            @db = db
+            @db = @schema.settings.db
         else
             if @schema.settings.dbName?
                 dbName = @schema.settings.dbName
