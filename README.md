@@ -12,7 +12,7 @@ Init database then define your models:
 ```coffeescript
 schema = new Schema 'pouchdb-adapter', dbName: 'pouchdb'
 
-Note =  model = db.define name, 
+Note =  schema.define name, 
     id: String
     title: String
     content: String
