@@ -1,6 +1,6 @@
 ## About
 
-*jugglindb-pouch-adapter* is an adapter for
+*jugglindb-pouchdv-adapter* is an adapter for
 [JugglingDB](https://github.com/1602/jugglingdb "JugglingDB") to make usage of
 PouchDB easy.
 
@@ -9,13 +9,15 @@ PouchDB easy.
 
 Init database then define your models:
 
-    schema = new Schema 'pouchdb-adapter', dbName: 'pouchdb'
+```coffeescript
+schema = new Schema 'pouchdb-adapter', dbName: 'pouchdb'
 
-    Note =  model = db.define name, 
-        id: String
-        title: String
-        content: String
-        creationDate: Date
+Note =  model = db.define name, 
+    id: String
+    title: String
+    content: String
+    creationDate: Date
+```
 
 
 ### Documents
