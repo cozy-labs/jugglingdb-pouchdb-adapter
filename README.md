@@ -1,8 +1,8 @@
 ## About
 
-*jugglindb-pouchdv-adapter* is an adapter for
-[JugglingDB](https://github.com/1602/jugglingdb "JugglingDB") to make usage of
-PouchDB easy.
+*jugglingdb-pouchdb-adapter* is an 
+[JugglingDB](https://github.com/1602/jugglingdb "JugglingDB") adapter to make
+usage of [PouchDB](http://pouchdb.com/) easy.
 
 
 ## Usage
