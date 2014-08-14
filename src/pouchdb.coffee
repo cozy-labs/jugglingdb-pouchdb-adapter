@@ -284,9 +284,19 @@ class module.exports.PouchDB
         mkdirp folder, (err) ->
             if err then callback err
             else
-                filename = pathHelpers.basename path
-                filepath = pathHelpers.join folder, filename
-                source = fs.createReadStream path
+                if typeof(filename) is 'string'
+                    filename = pathHelpers.basename path
+                    filepath = pathHelpers.join folder, filename
+                    source = fs.createReadStream path
+                else
+                    # path is a stream and filename is given in the data
+                    # object.
+                    source = path
+                    if data?
+                        filename = data.name
+                    else
+                        filename = 'file'
+                    filepath = pathHelpers.join folder, filename
                 target = fs.createWriteStream filepath
                 source.on 'error', callback
                 source.on 'end', callback
