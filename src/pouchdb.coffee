@@ -18,6 +18,7 @@ module.exports.initialize = (@schema, callback) ->
 
 class module.exports.PouchDB
 
+
     constructor: (@schema) ->
         @_models = {}
         @views = {}
@@ -358,26 +359,21 @@ class module.exports.PouchDB
         stringquery = stringquery.replace '\n', ''
 
         map = new Function "doc", stringquery
-        if reduce?
-            view =
-                map: map
-                reduce: reduce
-        else
-            view = map
+        view = map: map.toString()
+        view.reduce = reduce.toString() if reduce?
 
-        name = "_design/#{model.toLowerCase()}/#{name}"
-        @views[name] = view
-        callback()
-        #@db.get name, (err, designDoc) =>
-        #    unless designDoc?
-        #        designDoc =
-        #            _id: name
-        #            views: {}
-        #    unless designDoc.views?
-        #        designDoc.views = {}
-        #    designDoc.views[name] = view
-        #    @db.put designDoc, stale: 'update_after', (err, designDoc) ->
-        #        callback()
+        viewName = "_design/#{model.toLowerCase()}"
+        @db.get viewName, (err, designDoc) =>
+            unless designDoc?
+                designDoc =
+                    _id: viewName
+                    views: {}
+            unless designDoc.views?
+                designDoc.views = {}
+            viewName = "#{name}"
+            designDoc.views[viewName] = view
+            @db.put designDoc, (err, designDoc) ->
+                callback()
 
 
     # Return defined request result.
@@ -386,9 +382,8 @@ class module.exports.PouchDB
             callback = params
             params = {}
 
-        name = '_design/' + model.toLowerCase() + '/' + name
-        view = @views[name]
-        @db.query view, params, (err, body) =>
+        viewName = "#{model.toLowerCase()}/#{name}"
+        @db.query viewName, params, (err, body) =>
             if err
                 callback err
             else
@@ -476,7 +471,6 @@ class module.exports.PouchDB
     whatTypeName: (model, propName) ->
         ds = @schema.definitions[model]
         return ds.properties[propName] && ds.properties[propName].type.name
-
 
 # Send mail
 exports.sendMail = (data, callback) ->
