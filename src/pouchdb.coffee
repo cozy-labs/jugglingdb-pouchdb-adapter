@@ -370,8 +370,7 @@ class module.exports.PouchDB
                     views: {}
             unless designDoc.views?
                 designDoc.views = {}
-            viewName = "#{name}"
-            designDoc.views[viewName] = view
+            designDoc.views[name] = view
             @db.put designDoc, (err, designDoc) ->
                 callback()
 
