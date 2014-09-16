@@ -34,7 +34,9 @@
     "mkdirp": "0.5.0",
     "nodemailer-sendmail-transport": "1.0.0",
     "nodemailer": "1.1.1",
-    "node-uuid": "1.4.1"
+    "node-uuid": "1.4.1",
+    "fstream": "^1.0.2",
+    "rimraf": "^2.2.8"
   },
   "devDependencies": {
     "jugglingdb": "0.2.0",
