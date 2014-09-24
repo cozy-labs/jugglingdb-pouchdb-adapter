@@ -446,61 +446,6 @@ describe "Requests", ->
                 #@notes.should.have.length 0
                 #
 
-### Indexation ###
-
-ids = []
-dragonNoteId = "0"
-
-createNoteFunction = (schema, title, content, author) ->
-    (callback) ->
-        if author? then authorId = author.id else authorId = null
-        data =
-            title: title
-            content: content
-            author: authorId
-            docType: 'Note'
-
-        schema.Note.create data, (err, note) ->
-            ids.push note.id
-            dragonNoteId = note.id if title is "Note 02"
-
-            note.index ["title", "content"], (err) ->
-                callback()
-
-describe "Search features", ->
-
-    before (done) ->
-        @schema = getNewSchema 'test-index'
-        done()
-
-    after (done) ->
-        remove = require 'remove'
-        remove.removeSync './si'
-        @schema.adapter.db.destroy done
-
-    describe "index", ->
-
-        it "When given I index four notes", (done) ->
-            async.series [
-                createNoteFunction @schema, "Note 01", "little stories begin"
-                createNoteFunction @schema, "Note 02", "great dragons are coming"
-                createNoteFunction @schema, "Note 03", "small hobbits are afraid"
-                createNoteFunction @schema, "Note 04", "such as humans"
-            ], =>
-                done()
-
-        it "And I send a request to search the notes containing dragons", \
-                (done) ->
-            @schema.Note.search "dragons", (err, notes) =>
-                @notes = notes
-                done()
-
-        it "Then result is the second note I created", ->
-            @notes.length.should.equal 1
-            @notes[0].title.should.equal "Note 02"
-            @notes[0].content.should.equal "great dragons are coming"
-
-
 ### Attachments ###
 
 describe "Attachments", ->
