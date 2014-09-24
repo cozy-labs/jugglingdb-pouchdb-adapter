@@ -3,7 +3,6 @@ pathHelpers = require 'path'
 async = require 'async'
 mkdirp = require 'mkdirp'
 remove = require 'remove'
-indexer = require 'search-index'
 nodemailer = require 'nodemailer'
 sendmailTransport = require 'nodemailer-sendmail-transport'
 uuid = require 'node-uuid'
@@ -166,21 +165,11 @@ class module.exports.PouchDB
     #     note.destroy ->
     #         ...
     destroy: (model, id, callback) ->
-
         @db.get id, (err, doc) =>
             if err
                 callback err
             else
-                @db.remove doc, (err, response) ->
-                    if err
-                        callback err
-                    else if not response.ok
-                        callback new Error 'An error occured while deleting document.'
-                    else
-                        folder = pathHelpers.join "attachments", id
-                        indexer.del id, -> # ignore index deletion errors
-                            remove folder,  -> # ignore errors
-                                callback()
+                @db.remove doc, callback
 
 
     # index given fields of model instance inside cozy data indexer.
@@ -191,15 +180,7 @@ class module.exports.PouchDB
     #
     # TODO make search index silent.
     index: (model, fields, callback) ->
-        doc = {}
-        fields.push 'docType'
-        for field in fields
-            doc[field] = model[field]
-        wrapper = {}
-        wrapper[model.id] = doc
-
-        indexer.add wrapper, 'index', fields, (msg) ->
-            callback()
+        callback()
 
 
     # Retrieve note through index. Give a query then grab results.
@@ -207,28 +188,7 @@ class module.exports.PouchDB
     # ...
     #
     search: (model, query, callback) ->
-        q =
-            query:
-                '*': query.split(' ')
-            offset: "0"
-            pageSize: "20"
-            filter:
-                docType: model
-
-        indexer.search q, (hits) =>
-            results = []
-            ids = []
-
-            for hit in hits.hits
-                ids.push hit.id
-
-            async.eachSeries ids, (id, cb) =>
-                @find model, id, (err, result) ->
-                    results.push result unless err?
-                    cb()
-
-            , (err) ->
-                callback err, results
+        callback null, []
 
 
     # Save a file into data system and attach it to current model.
@@ -400,9 +360,8 @@ class module.exports.PouchDB
             callback = params
             params = {}
 
-        name = '_design/' + model.toLowerCase() + '/' + name
-        view = @views[name]
-        @db.query view, params, (err, body) =>
+        viewName = "#{model.toLowerCase()}/#{name}"
+        @db.query viewName, params, (err, body) =>
             if err
                 callback err
             else
@@ -412,8 +371,11 @@ class module.exports.PouchDB
     # Delete request that match given name for current type.
     removeRequest: (model, name, callback) ->
         name = '_design/' + model.toLowerCase() + '/' + name
-        delete @views[name]
-        callback()
+        @db.get name, (err, doc) ->
+            if err
+                callback err
+            else
+                @db.remove doc, callback
 
 
     # Delete all results that should be returned by the request.
