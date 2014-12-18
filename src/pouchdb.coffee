@@ -371,7 +371,7 @@ class module.exports.PouchDB
             if err
                 callback err
             else
-                callback null, body
+                callback null, body.rows or body
 
 
     # Delete request that match given name for current type.
