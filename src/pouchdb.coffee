@@ -240,28 +240,34 @@ class module.exports.PouchDB
     attachBinary: (model, path, data, callback) ->
         if typeof data is 'function'
             callback = data
+            data = null
+
+        writeStream = (filepath, source, callback) ->
+            target = fs.createWriteStream filepath
+            source.on 'error', callback
+            source.on 'end', callback
+            source.pipe target
 
         folder = pathHelpers.join "attachments", model.id
         mkdirp folder, (err) ->
             if err then callback err
-            else
-                if typeof(filename) is 'string'
-                    filename = pathHelpers.basename path
-                    filepath = pathHelpers.join folder, filename
-                    source = fs.createReadStream path
-                else
-                    # path is a stream and filename is given in the data
-                    # object.
-                    source = path
-                    if data?
-                        filename = data.name
-                    else
-                        filename = 'file'
-                    filepath = pathHelpers.join folder, filename
-                target = fs.createWriteStream filepath
-                source.on 'error', callback
-                source.on 'end', callback
-                source.pipe target
+            else if typeof(path) is 'string'
+                filename = pathHelpers.basename path
+                filepath = pathHelpers.join folder, filename
+                source = fs.createReadStream path
+                writeStream filepath, source, callback
+
+            else if path instanceof Buffer
+                filename = data?.name or 'file'
+                filepath = pathHelpers.join folder, filename
+                buffer = path
+                fr.writeFile filepath, buffer, callback
+
+            else # path is a stream
+                filename = data?.name or 'file'
+                filepath = pathHelpers.join folder, filename
+                source = path
+                writeStream filepath, source, callback
 
 
     # Get file stream of given file for given model.
