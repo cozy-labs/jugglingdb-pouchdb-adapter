@@ -261,7 +261,7 @@ class module.exports.PouchDB
                 filename = data?.name or 'file'
                 filepath = pathHelpers.join folder, filename
                 buffer = path
-                fr.writeFile filepath, buffer, callback
+                fs.writeFile filepath, buffer, callback
 
             else # path is a stream
                 filename = data?.name or 'file'
